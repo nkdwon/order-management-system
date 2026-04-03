@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Gestão de Pedidos</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="logo">Gestão de Pedidos</div>
+        <ul>
+          <li>
+            <a
+              href="#"
+              onclick="
+                mostrarDashboard()
+                return false
+              "
+              >📊 Dashboard</a
+            >
+          </li>
+          <li>
+            <a
+              href="#"
+              onclick="
+                mostrarPedidos()
+                return false
+              "
+              >📦 Pedidos</a
+            >
+          </li>
+          <li>
+            <a
+              href="#"
+              onclick="
+                mostrarProdutos()
+                return false
+              "
+              >🛍️ Produtos</a
+            >
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+      <div id="content"></div>
+    </div>
+
+    <!-- Templates -->
+
+    <!-- Dashboard Template -->
+    <template id="dashboard-template">
+      <div class="dashboard">
+        <h1>Dashboard</h1>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3>Pedidos</h3>
+            <p data-stat="pedidos" class="stat-value">0</p>
+          </div>
+          <div class="stat-card">
+            <h3>Produtos</h3>
+            <p data-stat="produtos" class="stat-value">0</p>
+          </div>
+          <div class="stat-card">
+            <h3>Itens</h3>
+            <p data-stat="itens" class="stat-value">0</p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Pedidos List Template -->
+    <template id="pedidos-list-template">
+      <div class="page">
+        <div class="page-header">
+          <h1>Pedidos</h1>
+          <button class="btn btn-success" onclick="mostrarFormPedido()">
+            + Novo Pedido
+          </button>
+        </div>
+        <div id="pedidos-container" class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Data</th>
+                <th>Valor Total</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="pedidos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- Pedido Row Template -->
+    <template id="pedido-row-template">
+      <tr>
+        <td>#<span data-field="id">0</span></td>
+        <td data-field="data">-</td>
+        <td data-field="valorTotal">R$ 0.00</td>
+        <td>
+          <button
+            class="btn btn-primary btn-small"
+            onclick="abrirPedido(event.currentTarget)"
+          >
+            👁️ Visualizar
+          </button>
+          <button
+            class="btn btn-danger btn-small"
+            onclick="deletarPedido(event.currentTarget)"
+          >
+            🗑️ Deletar
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <!-- Pedido Detail Template -->
+    <template id="pedido-detalhe-template">
+      <div class="pedido-detalhe">
+        <button
+          class="btn btn-secondary"
+          onclick="voltarParaPedido(event.currentTarget)"
+        >
+          ← Voltar
+        </button>
+
+        <div class="detalhe-header">
+          <h2>Pedido #<span data-field="id">0</span></h2>
+        </div>
+
+        <div class="detalhe-info">
+          <div class="info-row">
+            <span>Data:</span>
+            <span data-field="data">-</span>
+          </div>
+          <div class="info-row">
+            <span>Valor Total:</span>
+            <span data-field="valorTotal">R$ 0.00</span>
+          </div>
+        </div>
+
+        <div class="items-section">
+          <div class="items-header">
+            <h3>Itens do Pedido</h3>
+            <button
+              class="btn btn-success btn-small"
+              onclick="mostrarFormAdicionarItem(event.currentTarget)"
+            >
+              + Adicionar Produto
+            </button>
+          </div>
+          <div id="itens-pedido-container"></div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Item Pedido Row Template -->
+    <template id="item-pedido-row-template">
+      <div class="item-row">
+        <div class="item-info">
+          <div class="item-produto">
+            <strong data-field="produto-nome">Produto</strong>
+            <span class="item-tipo" data-field="produto-tipo">Tipo</span>
+          </div>
+          <div class="item-detalhes">
+            <span>Qtd: <strong data-field="quantidade">0</strong></span>
+            <span>Valor: <strong data-field="valorItem">R$ 0.00</strong></span>
+            <span
+              >Subtotal: <strong data-field="subtotal">R$ 0.00</strong></span
+            >
+          </div>
+        </div>
+        <button
+          class="btn btn-danger btn-small"
+          onclick="deletarItem(event.currentTarget)"
+        >
+          🗑️ Remover
+        </button>
+      </div>
+    </template>
+
+    <!-- Item Form Template -->
+    <template id="item-form-template">
+      <div class="form-container">
+        <h2>Adicionar Item ao Pedido</h2>
+        <form
+          onsubmit="
+            event.preventDefault()
+            criarItem()
+          "
+        >
+          <input type="hidden" id="itemPedidoId" value="" />
+
+          <div class="form-group">
+            <label for="itemProdutoSelect">Produto:</label>
+            <select id="itemProdutoSelect" data-field="produto" required>
+              <option value="">Selecione um produto...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="itemQuantidade">Quantidade:</label>
+            <input
+              type="number"
+              id="itemQuantidade"
+              data-field="quantidade"
+              min="1"
+              value="1"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="itemValor">Valor Unitário:</label>
+            <input
+              type="number"
+              id="itemValor"
+              data-field="valorItem"
+              step="0.01"
+              value="0.00"
+              required
+            />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-success">
+              ✓ Adicionar Item
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="voltarParaPedido()"
+            >
+              ← Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </template>
+
+    <!-- Pedido Form Template -->
+    <template id="pedido-form-template">
+      <div class="form-container">
+        <h2>Novo Pedido</h2>
+        <form
+          onsubmit="
+            event.preventDefault()
+            criarPedido()
+          "
+        >
+          <div class="form-group">
+            <label for="pedidoData">Data:</label>
+            <input type="date" id="pedidoData" required />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-success">
+              ✓ Criar Pedido
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="mostrarPedidos()"
+            >
+              ← Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </template>
+
+    <!-- Produtos List Template -->
+    <template id="produtos-list-template">
+      <div class="page">
+        <div class="page-header">
+          <h1>Produtos</h1>
+          <button class="btn btn-success" onclick="mostrarFormProduto()">
+            + Novo Produto
+          </button>
+        </div>
+        <div id="produtos-container" class="products-grid"></div>
+      </div>
+    </template>
+
+    <!-- Produto Card Template -->
+    <template id="produto-card-template">
+      <div class="product-card">
+        <div class="product-info">
+          <h3 data-field="nome">Produto</h3>
+          <p class="product-price" data-field="preco">R$ 0.00</p>
+          <p class="stock" data-field="estoque">-</p>
+        </div>
+        <div class="product-actions">
+          <button
+            class="btn btn-primary btn-small"
+            data-action="edit"
+            onclick="editarProdutoClick(event.currentTarget)"
+          >
+            ✏️ Editar
+          </button>
+          <button
+            class="btn btn-danger btn-small"
+            onclick="deletarProduto(event.currentTarget)"
+          >
+            🗑️ Deletar
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Produto Form Template -->
+    <template id="produto-form-template">
+      <div class="form-container">
+        <h2>Novo Produto</h2>
+        <form
+          onsubmit="
+            event.preventDefault()
+            criarProduto()
+          "
+        >
+          <div class="form-group">
+            <label for="nomeProduto">Nome:</label>
+            <input type="text" id="nomeProduto" required />
+          </div>
+
+          <div class="form-group">
+            <label for="precoProduto">Preço:</label>
+            <input type="number" id="precoProduto" step="0.01" required />
+          </div>
+
+          <div class="form-group">
+            <label for="estoqueProduto">Estoque:</label>
+            <input type="number" id="estoqueProduto" value="0" required />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-success">
+              ✓ Criar Produto
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="mostrarProdutos()"
+            >
+              ← Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </template>
+
+    <!-- Produto Edit Form Template -->
+    <template id="produto-edit-form-template">
+      <div class="form-container">
+        <h2>Editar Produto</h2>
+        <form
+          onsubmit="
+            event.preventDefault()
+            salvarProdutoEditado()
+          "
+        >
+          <input type="hidden" id="produtoEditId" value="" />
+
+          <div class="form-group">
+            <label for="nomeProdutoEdit">Nome:</label>
+            <input type="text" id="nomeProdutoEdit" required />
+          </div>
+
+          <div class="form-group">
+            <label for="precoProdutoEdit">Preço:</label>
+            <input type="number" id="precoProdutoEdit" step="0.01" required />
+          </div>
+
+          <div class="form-group">
+            <label for="estoqueProdutoEdit">Estoque:</label>
+            <input type="number" id="estoqueProdutoEdit" required />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-success">
+              ✓ Salvar Produto
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="mostrarProdutos()"
+            >
+              ← Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </template>
+
+    <!-- Empty Message Template -->
+    <template id="empty-message-template">
+      <div class="empty-message">
+        <p>Nenhum registro encontrado.</p>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>
+        Sistema de Gestão de Pedidos - Trabalho de Engenharia de Software II<br />
+        <strong>Autores:</strong> Felipe Barros e Vitor Gomes
+      </p>
+    </footer>
+  </body>
+</html>
