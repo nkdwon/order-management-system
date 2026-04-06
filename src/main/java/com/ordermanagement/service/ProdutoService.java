@@ -72,4 +72,14 @@ public class ProdutoService {
             produtoRepository.save(p);
         }
     }
+
+    // Aumentar estoque
+    public void aumentarEstoque(Long id, int quantidade) {
+        Optional<Produto> produto = produtoRepository.findById(id);
+        if (produto.isPresent()) {
+            Produto p = produto.get();
+            p.setEstoque(p.getEstoque() + quantidade);
+            produtoRepository.save(p);
+        }
+    }
 }
