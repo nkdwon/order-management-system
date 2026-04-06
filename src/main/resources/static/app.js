@@ -1,5 +1,195 @@
 const API_URL = 'http://localhost:8080/api'
 
+// Front-only demo mode:
+// - Enabled automatically when opening index.html directly (file://)
+// - Also enabled as fallback if API requests fail at runtime
+let demoMode = window.location.protocol === 'file:'
+
+const demoStore = {
+  pedidos: [{ id: 1, data: '2026-04-05', valorTotal: 0 }],
+  produtos: [
+    { id: 1, nome: 'Notebook', preco: 4999.9, estoque: 5 },
+    { id: 2, nome: 'Mouse', preco: 89.9, estoque: 20 },
+    { id: 3, nome: 'Teclado', preco: 159.9, estoque: 12 }
+  ],
+  itens: [],
+  nextPedidoId: 2,
+  nextProdutoId: 4,
+  nextItemId: 1
+}
+
+function parseApiPath(url) {
+  const parsed = new URL(url, window.location.origin)
+  return parsed.pathname.replace(/\/+$/, '')
+}
+
+function recalculatePedidoTotal(pedidoId) {
+  const pedido = demoStore.pedidos.find(p => p.id === pedidoId)
+  if (!pedido) return
+
+  const total = demoStore.itens
+    .filter(i => i.pedidoId === pedidoId)
+    .reduce((sum, i) => sum + i.quantidade * i.valorItem, 0)
+
+  pedido.valorTotal = Number(total.toFixed(2))
+}
+
+function toItemResponse(item) {
+  const pedido = demoStore.pedidos.find(p => p.id === item.pedidoId)
+  const produto = demoStore.produtos.find(p => p.id === item.produtoId)
+  return {
+    id: item.id,
+    quantidade: item.quantidade,
+    valorItem: item.valorItem,
+    pedido,
+    produto
+  }
+}
+
+function jsonResponse(data, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  )
+}
+
+function emptyResponse(status = 204) {
+  return Promise.resolve(new Response(null, { status }))
+}
+
+function handleDemoRequest(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase()
+  const path = parseApiPath(url)
+  const body = options.body ? JSON.parse(options.body) : null
+
+  if (path === '/api/pedidos' && method === 'GET') {
+    return jsonResponse(demoStore.pedidos)
+  }
+
+  if (path === '/api/pedidos' && method === 'POST') {
+    const novoPedido = {
+      id: demoStore.nextPedidoId++,
+      data: body?.data || new Date().toISOString().slice(0, 10),
+      valorTotal: 0
+    }
+    demoStore.pedidos.push(novoPedido)
+    return jsonResponse(novoPedido, 201)
+  }
+
+  if (/^\/api\/pedidos\/\d+$/.test(path) && method === 'GET') {
+    const id = Number(path.split('/').pop())
+    const pedido = demoStore.pedidos.find(p => p.id === id)
+    return pedido ? jsonResponse(pedido) : jsonResponse({ error: 'Not found' }, 404)
+  }
+
+  if (/^\/api\/pedidos\/\d+$/.test(path) && method === 'DELETE') {
+    const id = Number(path.split('/').pop())
+    demoStore.pedidos = demoStore.pedidos.filter(p => p.id !== id)
+    demoStore.itens = demoStore.itens.filter(i => i.pedidoId !== id)
+    return emptyResponse()
+  }
+
+  if (path === '/api/produtos' && method === 'GET') {
+    return jsonResponse(demoStore.produtos)
+  }
+
+  if (path === '/api/produtos' && method === 'POST') {
+    const novoProduto = {
+      id: demoStore.nextProdutoId++,
+      nome: body?.nome || 'Novo Produto',
+      preco: Number(body?.preco || 0),
+      estoque: Number(body?.estoque || 0)
+    }
+    demoStore.produtos.push(novoProduto)
+    return jsonResponse(novoProduto, 201)
+  }
+
+  if (/^\/api\/produtos\/\d+$/.test(path) && method === 'GET') {
+    const id = Number(path.split('/').pop())
+    const produto = demoStore.produtos.find(p => p.id === id)
+    return produto
+      ? jsonResponse(produto)
+      : jsonResponse({ error: 'Not found' }, 404)
+  }
+
+  if (/^\/api\/produtos\/\d+$/.test(path) && method === 'PUT') {
+    const id = Number(path.split('/').pop())
+    const produto = demoStore.produtos.find(p => p.id === id)
+    if (!produto) return jsonResponse({ error: 'Not found' }, 404)
+
+    produto.nome = body?.nome ?? produto.nome
+    produto.preco = Number(body?.preco ?? produto.preco)
+    produto.estoque = Number(body?.estoque ?? produto.estoque)
+
+    return jsonResponse(produto)
+  }
+
+  if (/^\/api\/produtos\/\d+$/.test(path) && method === 'DELETE') {
+    const id = Number(path.split('/').pop())
+    demoStore.produtos = demoStore.produtos.filter(p => p.id !== id)
+    demoStore.itens = demoStore.itens.filter(i => i.produtoId !== id)
+    demoStore.pedidos.forEach(p => recalculatePedidoTotal(p.id))
+    return emptyResponse()
+  }
+
+  if (path === '/api/itens' && method === 'GET') {
+    return jsonResponse(demoStore.itens.map(toItemResponse))
+  }
+
+  if (path === '/api/itens' && method === 'POST') {
+    const pedidoId = Number(body?.pedido?.id)
+    const produtoId = Number(body?.produto?.id)
+    const pedido = demoStore.pedidos.find(p => p.id === pedidoId)
+    const produto = demoStore.produtos.find(p => p.id === produtoId)
+    if (!pedido || !produto) return jsonResponse({ error: 'Invalid relation' }, 400)
+
+    const novoItem = {
+      id: demoStore.nextItemId++,
+      quantidade: Number(body?.quantidade || 1),
+      valorItem: Number(body?.valorItem || produto.preco),
+      pedidoId,
+      produtoId
+    }
+
+    demoStore.itens.push(novoItem)
+    recalculatePedidoTotal(pedidoId)
+
+    return jsonResponse(toItemResponse(novoItem), 201)
+  }
+
+  if (/^\/api\/itens\/\d+$/.test(path) && method === 'DELETE') {
+    const id = Number(path.split('/').pop())
+    const item = demoStore.itens.find(i => i.id === id)
+    demoStore.itens = demoStore.itens.filter(i => i.id !== id)
+    if (item) recalculatePedidoTotal(item.pedidoId)
+    return emptyResponse()
+  }
+
+  return jsonResponse({ error: 'Unsupported demo route' }, 404)
+}
+
+const originalFetch = window.fetch.bind(window)
+window.fetch = async function (url, options = {}) {
+  const isApiRequest = String(url).includes('/api')
+
+  if (demoMode && isApiRequest) {
+    return handleDemoRequest(url, options)
+  }
+
+  try {
+    return await originalFetch(url, options)
+  } catch (error) {
+    if (isApiRequest) {
+      demoMode = true
+      console.warn('API indisponivel. Front-end em modo demo local.', error)
+      return handleDemoRequest(url, options)
+    }
+    throw error
+  }
+}
+
 // ========== ESTADO GLOBAL ==========
 let pedidoAberto = null
 
@@ -262,12 +452,19 @@ async function mostrarFormEditarProduto(id) {
     content.innerHTML = ''
     const form = renderTemplate('produto-edit-form-template')
 
-    document.getElementById('produtoEditId').value = id
-    document.getElementById('nomeProdutoEdit').value = produto.nome
-    document.getElementById('precoProdutoEdit').value = produto.preco
-    document.getElementById('estoqueProdutoEdit').value = produto.estoque
-
+    // Anexa o formulário antes de acessar seus elementos
     content.appendChild(form)
+
+    // Buscar elementos dentro do conteúdo recém-inserido
+    const produtoEditIdEl = content.querySelector('#produtoEditId')
+    const nomeEditEl = content.querySelector('#nomeProdutoEdit')
+    const precoEditEl = content.querySelector('#precoProdutoEdit')
+    const estoqueEditEl = content.querySelector('#estoqueProdutoEdit')
+
+    if (produtoEditIdEl) produtoEditIdEl.value = id
+    if (nomeEditEl) nomeEditEl.value = produto.nome
+    if (precoEditEl) precoEditEl.value = produto.preco
+    if (estoqueEditEl) estoqueEditEl.value = produto.estoque
   } catch (error) {
     console.error('Erro:', error)
     alert('Erro ao carregar produto')
@@ -317,7 +514,8 @@ async function mostrarFormAdicionarItem(button) {
     content.innerHTML = ''
     const form = renderTemplate('item-form-template')
 
-    document.getElementById('itemPedidoId').value = pedidoAberto.id
+    const itemPedidoIdInput = form.querySelector('#itemPedidoId')
+    if (itemPedidoIdInput) itemPedidoIdInput.value = pedidoAberto.id
 
     const produtoSelect = form.querySelector('#itemProdutoSelect')
 
@@ -338,15 +536,17 @@ async function mostrarFormAdicionarItem(button) {
     produtoSelect.addEventListener('change', function () {
       const selectedOption = this.options[this.selectedIndex]
       const preco = selectedOption.dataset.preco
-      document.getElementById('itemValor').value = preco
+      const itemValorInput = form.querySelector('#itemValor')
+      if (itemValorInput) itemValorInput.value = preco
     })
+
+    content.appendChild(form)
 
     // Setar valor padrão do primeiro produto
     if (produtos.length > 0) {
-      document.getElementById('itemValor').value = produtos[0].preco
+      const itemValorInput = form.querySelector('#itemValor')
+      if (itemValorInput) itemValorInput.value = produtos[0].preco
     }
-
-    content.appendChild(form)
   } catch (error) {
     console.error('Erro:', error)
   }
@@ -377,8 +577,13 @@ async function criarItem() {
 }
 
 function voltarParaPedido(button) {
-  if (pedidoAberto) {
-    abrirPedido({ dataset: { id: pedidoAberto.id } })
+  // Se o botão forneceu um dataset.id, prioriza esse id (ex.: cancel em formulários).
+  // Caso contrário, tenta usar o `pedidoAberto` em memória. Se nada existir, mostra a lista.
+  const idFromButton = button && button.dataset && button.dataset.id
+  const id = idFromButton || (pedidoAberto && pedidoAberto.id)
+
+  if (id) {
+    abrirPedido({ dataset: { id } })
   } else {
     mostrarPedidos()
   }
