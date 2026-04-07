@@ -1,20 +1,18 @@
 package com.ordermanagement.model;
 
 import jakarta.persistence.Entity;
+import java.time.LocalDate;
 
 @Entity
 public class ProdutoPerecivel extends Produto {
 
-  private String dataValidade;
+    private LocalDate dataValidade;
 
-  // dataValidade
-  public String getDataValidade() {
-    return dataValidade;
-  }
+    public LocalDate getDataValidade() {
+        return dataValidade;
+    }
 
-  public void setDataValidade(String dataValidade) {
-    this.dataValidade = dataValidade;
-  }
-
-
+    public void setDataValidade(LocalDate dataValidade) {
+        this.dataValidade = dataValidade;
+    }
 }

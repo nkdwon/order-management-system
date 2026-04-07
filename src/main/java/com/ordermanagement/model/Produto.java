@@ -11,14 +11,16 @@ public class Produto {
   private Long id;
 
   private String nome;
-  private double preco;
-  private int estoque;
+  private Double preco;
+  private Integer estoque;
+
+  public Produto() {
+  }
 
   public Long getId() {
     return id;
   }
 
-  // nome
   public String getNome() {
     return nome;
   }
@@ -27,21 +29,19 @@ public class Produto {
     this.nome = nome;
   }
 
-  // preço
-  public double getPreco() {
+  public Double getPreco() {
     return preco;
   }
 
-  public void setPreco(double preco) {
+  public void setPreco(Double preco) {
     this.preco = preco;
   }
 
-  // estoque
-  public int getEstoque() {
+  public Integer getEstoque() {
     return estoque;
   }
 
-  public void setEstoque(int estoque) {
+  public void setEstoque(Integer estoque) {
     this.estoque = estoque;
   }
 }

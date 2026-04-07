@@ -1,11 +1,12 @@
 package com.ordermanagement.service;
 
 import com.ordermanagement.model.Produto;
-import com.ordermanagement.model.ProdutoEletronico;
-import com.ordermanagement.model.ProdutoPerecivel;
+import com.ordermanagement.repository.ItemRepository;
 import com.ordermanagement.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -15,22 +16,24 @@ public class ProdutoService {
     @Autowired
     private ProdutoRepository produtoRepository;
 
-    // Criar novo produto
+    @Autowired
+    private ItemRepository itemRepository;
+
+    @Transactional
     public Produto criarProduto(Produto produto) {
+        validarProduto(produto);
         return produtoRepository.save(produto);
     }
 
-    // Listar todos os produtos
     public List<Produto> listarTodos() {
         return produtoRepository.findAll();
     }
 
-    // Buscar produto por ID
     public Optional<Produto> buscarPorId(Long id) {
         return produtoRepository.findById(id);
     }
 
-    // Atualizar produto
+    @Transactional
     public Produto atualizarProduto(Long id, Produto produtoAtualizado) {
         Optional<Produto> produtoExistente = produtoRepository.findById(id);
         if (produtoExistente.isPresent()) {
@@ -38,23 +41,28 @@ public class ProdutoService {
             if (produtoAtualizado.getNome() != null) {
                 produto.setNome(produtoAtualizado.getNome());
             }
-            if (produtoAtualizado.getPreco() > 0) {
+            if (produtoAtualizado.getPreco() != null) {
                 produto.setPreco(produtoAtualizado.getPreco());
             }
-            if (produtoAtualizado.getEstoque() >= 0) {
+            if (produtoAtualizado.getEstoque() != null) {
                 produto.setEstoque(produtoAtualizado.getEstoque());
             }
+
+            validarProduto(produto);
             return produtoRepository.save(produto);
         }
         return null;
     }
 
-    // Deletar produto
+    @Transactional
     public void deletarProduto(Long id) {
+        if (itemRepository.existsByProdutoId(id)) {
+            throw new IllegalArgumentException(
+                    "Não é possível excluir produto que já está vinculado a itens de pedido");
+        }
         produtoRepository.deleteById(id);
     }
 
-    // Verificar estoque
     public boolean verificarEstoque(Long id, int quantidade) {
         Optional<Produto> produto = produtoRepository.findById(id);
         if (produto.isPresent()) {
@@ -63,23 +71,49 @@ public class ProdutoService {
         return false;
     }
 
-    // Reduzir estoque
+    @Transactional
     public void reduzirEstoque(Long id, int quantidade) {
-        Optional<Produto> produto = produtoRepository.findById(id);
-        if (produto.isPresent()) {
-            Produto p = produto.get();
-            p.setEstoque(p.getEstoque() - quantidade);
-            produtoRepository.save(p);
+        Produto produto = buscarEntidade(id);
+        if (quantidade < 0) {
+            throw new IllegalArgumentException("Quantidade para reduzir estoque deve ser positiva");
         }
+
+        if (produto.getEstoque() < quantidade) {
+            throw new IllegalArgumentException("Estoque insuficiente para o produto id=" + id);
+        }
+
+        produto.setEstoque(produto.getEstoque() - quantidade);
+        produtoRepository.save(produto);
     }
 
-    // Aumentar estoque
+    @Transactional
     public void aumentarEstoque(Long id, int quantidade) {
-        Optional<Produto> produto = produtoRepository.findById(id);
-        if (produto.isPresent()) {
-            Produto p = produto.get();
-            p.setEstoque(p.getEstoque() + quantidade);
-            produtoRepository.save(p);
+        Produto produto = buscarEntidade(id);
+        if (quantidade < 0) {
+            throw new IllegalArgumentException("Quantidade para aumentar estoque deve ser positiva");
+        }
+
+        produto.setEstoque(produto.getEstoque() + quantidade);
+        produtoRepository.save(produto);
+    }
+
+    public Produto buscarEntidade(Long id) {
+        return produtoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Produto não encontrado: id=" + id));
+    }
+
+    private void validarProduto(Produto produto) {
+        if (produto == null) {
+            throw new IllegalArgumentException("Produto inválido");
+        }
+        if (produto.getNome() == null || produto.getNome().isBlank()) {
+            throw new IllegalArgumentException("Nome do produto é obrigatório");
+        }
+        if (produto.getPreco() == null || produto.getPreco() <= 0) {
+            throw new IllegalArgumentException("Preço deve ser maior que zero");
+        }
+        if (produto.getEstoque() == null || produto.getEstoque() < 0) {
+            throw new IllegalArgumentException("Estoque deve ser zero ou positivo");
         }
     }
 }

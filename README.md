@@ -115,6 +115,23 @@ Checklist:
 - Nesse caso, navegue normalmente usando o **modo demo**.
 - Para dados reais, rode o backend com MySQL (seção 2).
 
+#### Erro: `Web server failed to start. Port 8080 was already in use`
+
+Causa comum: já existe outro processo usando a porta `8080`.
+
+No Windows (PowerShell):
+
+```powershell
+netstat -ano | findstr :8080
+taskkill /PID <PID_ENCONTRADO> /F
+```
+
+Alternativa: subir em outra porta:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
+```
+
 ## 📋 Funcionalidades
 
 - ✅ Gestão de Pedidos (criar, listar, deletar)
@@ -145,16 +162,28 @@ src/main/resources/
 ### Pedidos
 - `GET /api/pedidos` - Listar
 - `POST /api/pedidos` - Criar
+- `GET /api/pedidos/{id}` - Buscar por ID
+- `PUT /api/pedidos/{id}` - Atualizar
 - `DELETE /api/pedidos/{id}` - Deletar
+- `POST /api/pedidos/{id}/confirmar` - Recalcular total
 
 ### Produtos
 - `GET /api/produtos` - Listar
 - `POST /api/produtos` - Criar
+- `POST /api/produtos/eletronicos` - Criar eletrônico
+- `POST /api/produtos/pereciveis` - Criar perecível
+- `GET /api/produtos/{id}` - Buscar por ID
+- `PUT /api/produtos/{id}` - Atualizar
 - `DELETE /api/produtos/{id}` - Deletar
+- `GET /api/produtos/{id}/estoque/{quantidade}` - Verificar estoque
+- `PUT /api/produtos/{id}/reduzir-estoque/{quantidade}` - Reduzir estoque
 
 ### Itens
 - `GET /api/itens` - Listar
 - `POST /api/itens` - Criar
+- `GET /api/itens/{id}` - Buscar por ID
+- `PUT /api/itens/{id}` - Atualizar
+- `DELETE /api/itens/{id}` - Deletar
 
 ## 📝 Tecnologias
 

@@ -4,6 +4,8 @@ import com.ordermanagement.model.Pedido;
 import com.ordermanagement.repository.PedidoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -13,22 +15,27 @@ public class PedidoService {
     @Autowired
     private PedidoRepository pedidoRepository;
 
-    // Criar novo pedido
+    @Transactional
     public Pedido criarPedido(Pedido pedido) {
+        if (pedido == null) {
+            throw new IllegalArgumentException("Pedido inválido");
+        }
+        if (pedido.getData() == null) {
+            pedido.setData(java.time.LocalDate.now());
+        }
+        pedido.calcularTotal();
         return pedidoRepository.save(pedido);
     }
 
-    // Listar todos os pedidos
     public List<Pedido> listarTodos() {
         return pedidoRepository.findAll();
     }
 
-    // Buscar pedido por ID
     public Optional<Pedido> buscarPorId(Long id) {
         return pedidoRepository.findById(id);
     }
 
-    // Atualizar pedido
+    @Transactional
     public Pedido atualizarPedido(Long id, Pedido pedidoAtualizado) {
         Optional<Pedido> pedidoExistente = pedidoRepository.findById(id);
         if (pedidoExistente.isPresent()) {
@@ -36,33 +43,32 @@ public class PedidoService {
             if (pedidoAtualizado.getData() != null) {
                 pedido.setData(pedidoAtualizado.getData());
             }
-            if (pedidoAtualizado.getValorTotal() > 0) {
-                pedido.setValorTotal(pedidoAtualizado.getValorTotal());
-            }
-            if (pedidoAtualizado.getItens() != null) {
-                pedido.setItens(pedidoAtualizado.getItens());
-            }
+
+            // valorTotal é derivado dos itens, portanto não deve ser definido pelo cliente.
+            pedido.calcularTotal();
             return pedidoRepository.save(pedido);
         }
         return null;
     }
 
-    // Deletar pedido
+    @Transactional
     public void deletarPedido(Long id) {
         pedidoRepository.deleteById(id);
     }
 
-    // Confirmar pedido (cálculo de valor total)
+    @Transactional
     public Pedido confirmarPedido(Long id) {
         Optional<Pedido> pedidoOpt = pedidoRepository.findById(id);
         if (pedidoOpt.isPresent()) {
             Pedido pedido = pedidoOpt.get();
-            double valorTotal = pedido.getItens().stream()
-                    .mapToDouble(item -> item.getValorItem() * item.getQuantidade())
-                    .sum();
-            pedido.setValorTotal(valorTotal);
+            pedido.calcularTotal();
             return pedidoRepository.save(pedido);
         }
         return null;
+    }
+
+    public Pedido buscarEntidade(Long id) {
+        return pedidoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado: id=" + id));
     }
 }

@@ -5,13 +5,13 @@ import jakarta.persistence.Entity;
 @Entity
 public class ProdutoEletronico extends Produto {
 
-  private int voltagem;
+    private Integer voltagem;
 
-  public int getVoltagem() {
-    return voltagem;
-  }
+    public Integer getVoltagem() {
+        return voltagem;
+    }
 
-  public void setVoltagem(int voltagem) {
-    this.voltagem = voltagem;
-  }
+    public void setVoltagem(Integer voltagem) {
+        this.voltagem = voltagem;
+    }
 }

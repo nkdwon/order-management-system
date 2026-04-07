@@ -1,6 +1,8 @@
 package com.ordermanagement.controller;
 
 import com.ordermanagement.model.Produto;
+import com.ordermanagement.model.ProdutoEletronico;
+import com.ordermanagement.model.ProdutoPerecivel;
 import com.ordermanagement.service.ProdutoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,20 @@ public class ProdutoController {
     // POST - Criar novo produto
     @PostMapping
     public ResponseEntity<Produto> criarProduto(@RequestBody Produto produto) {
+        Produto novoProduto = produtoService.criarProduto(produto);
+        return new ResponseEntity<>(novoProduto, HttpStatus.CREATED);
+    }
+
+    // POST - Criar produto eletrônico
+    @PostMapping("/eletronicos")
+    public ResponseEntity<Produto> criarProdutoEletronico(@RequestBody ProdutoEletronico produto) {
+        Produto novoProduto = produtoService.criarProduto(produto);
+        return new ResponseEntity<>(novoProduto, HttpStatus.CREATED);
+    }
+
+    // POST - Criar produto perecível
+    @PostMapping("/pereciveis")
+    public ResponseEntity<Produto> criarProdutoPerecivel(@RequestBody ProdutoPerecivel produto) {
         Produto novoProduto = produtoService.criarProduto(produto);
         return new ResponseEntity<>(novoProduto, HttpStatus.CREATED);
     }

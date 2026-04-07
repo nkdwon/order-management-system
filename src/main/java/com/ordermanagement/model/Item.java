@@ -1,5 +1,6 @@
 package com.ordermanagement.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -9,50 +10,49 @@ public class Item {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  private int quantidade;
-  private double valorItem;
+  private Integer quantidade;
+
+  private Double valorItem;
 
   @ManyToOne
-  private Produto produto;
-
-  @ManyToOne
+  @JoinColumn(name = "pedido_id")
+  @JsonBackReference
   private Pedido pedido;
 
-  // id
+  @ManyToOne
+  @JoinColumn(name = "produto_id")
+  private Produto produto;
+
   public Long getId() {
     return id;
   }
 
-  // quantidade
-  public int getQuantidade() {
+  public Integer getQuantidade() {
     return quantidade;
   }
 
-  public void setQuantidade(int quantidade) {
+  public void setQuantidade(Integer quantidade) {
     this.quantidade = quantidade;
   }
 
-  // valorItem
-  public double getValorItem() {
+  public Double getValorItem() {
     return valorItem;
   }
 
-  public void setValorItem(double valorItem) {
+  public void setValorItem(Double valorItem) {
     this.valorItem = valorItem;
   }
 
-  // produto
+  public Pedido getPedido() {
+    return pedido;
+  }
+
   public Produto getProduto() {
     return produto;
   }
 
   public void setProduto(Produto produto) {
     this.produto = produto;
-  }
-
-  // pedido
-  public Pedido getPedido() {
-    return pedido;
   }
 
   public void setPedido(Pedido pedido) {
