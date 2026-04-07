@@ -140,6 +140,24 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 - ✅ Herança de Produtos (Eletrônico, Perecível)
 - ✅ Interface web responsiva
 
+## 📸 Visão Final do Projeto
+
+### Dashboard
+
+![Dashboard](./docs/final_project01.PNG)
+
+### Pedidos
+
+![Pedidos](./docs/final_project02.PNG)
+
+### Detalhe do Pedido
+
+![Detalhe do Pedido](./docs/final_project03.PNG)
+
+### Produtos
+
+![Produtos](./docs/final_project04.PNG)
+
 ## 📁 Estrutura
 
 ```
